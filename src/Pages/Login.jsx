@@ -100,7 +100,23 @@ export default function Login() {
     }
 
     setLoginError('');
-    localStorage.setItem('currentUser', JSON.stringify(userAccount));
+    // Strip KYC base64 blobs — they live in kyc_<accountNumber> separately
+    const { kyc, ...userWithoutKyc } = userAccount;
+    const userToStore = kyc
+      ? { ...userWithoutKyc, kyc: { panCard: { ...kyc.panCard, fileData: undefined }, aadhaarCard: { ...kyc.aadhaarCard, fileData: undefined } } }
+      : userWithoutKyc;
+    try {
+      localStorage.setItem('currentUser', JSON.stringify(userToStore));
+    } catch {
+      // Quota still exceeded — store only essential fields
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: userAccount.id, accountNumber: userAccount.accountNumber,
+        firstName: userAccount.firstName, lastName: userAccount.lastName,
+        email: userAccount.email, phone: userAccount.phone,
+        username: userAccount.username, accountType: userAccount.accountType,
+        balance: userAccount.balance, status: userAccount.status,
+      }));
+    }
     cleanup();
     navigate('/user-dashboard', { replace: true });
   };

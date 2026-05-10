@@ -523,7 +523,21 @@ export default function AdminDashboard() {
     setAccounts(JSON.parse(localStorage.getItem('bankAccounts') || '[]'))
   }, [])
 
-  const updateStatus = (id, status) => {
+  /* Open detail modal — merge KYC file data from separate storage key */
+  const openDetail = (account) => {
+    const kycFiles = JSON.parse(localStorage.getItem(`kyc_${account.accountNumber}`) || 'null');
+    if (kycFiles && account.kyc) {
+      setSelected({
+        ...account,
+        kyc: {
+          panCard:     { ...account.kyc.panCard,     fileData: kycFiles.panCard?.fileData },
+          aadhaarCard: { ...account.kyc.aadhaarCard, fileData: kycFiles.aadhaarCard?.fileData },
+        }
+      });
+    } else {
+      setSelected(account);
+    }
+  };
     setAccounts(prev => {
       const updated = prev.map(a =>
         a.id === id ? { ...a, status, [`${status.toLowerCase()}At`]: new Date().toISOString() } : a
@@ -558,7 +572,7 @@ export default function AdminDashboard() {
 
   /* ── Table row ── */
   const Row = ({ account }) => (
-    <tr className="adm-table__row" onClick={() => setSelected(account)}>
+    <tr className="adm-table__row" onClick={() => openDetail(account)}>
       <td>
         <div className="adm-table__name">
           <div className="adm-table__avatar">{(account.firstName?.[0] || '?').toUpperCase()}</div>
@@ -574,7 +588,7 @@ export default function AdminDashboard() {
       <td>{fmtDate(account.createdAt)}</td>
       <td><StatusBadge status={account.status} /></td>
       <td>
-        <button className="adm-view-btn" onClick={e => { e.stopPropagation(); setSelected(account) }}>
+        <button className="adm-view-btn" onClick={e => { e.stopPropagation(); openDetail(account) }}>
           <FaEye /> View Details
         </button>
       </td>

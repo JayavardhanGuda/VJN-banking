@@ -190,9 +190,35 @@ export default function Register() {
 
     Promise.all([readAsBase64(panFile), readAsBase64(aadhaarFile)])
       .then(([panBase64, aadhaarBase64]) => {
+        const accountNumber = `SB${Math.floor(100000000 + Math.random() * 900000000)}`;
+
+        /* KYC metadata stored in bankAccounts (no base64) */
+        const kycMeta = {
+          panCard: {
+            fileName:   panFile.name,
+            fileSize:   panFile.size,
+            fileType:   panFile.type,
+            uploadedAt: new Date().toISOString(),
+            verified:   false
+          },
+          aadhaarCard: {
+            fileName:   aadhaarFile.name,
+            fileSize:   aadhaarFile.size,
+            fileType:   aadhaarFile.type,
+            uploadedAt: new Date().toISOString(),
+            verified:   false
+          }
+        };
+
+        /* KYC file data stored separately to avoid quota issues */
+        const kycFiles = {
+          panCard:     { ...kycMeta.panCard,     fileData: panBase64 },
+          aadhaarCard: { ...kycMeta.aadhaarCard, fileData: aadhaarBase64 }
+        };
+
         const newAccount = {
           id:            Date.now(),
-          accountNumber: `SB${Math.floor(100000000 + Math.random() * 900000000)}`,
+          accountNumber,
           firstName:     formData.firstName.trim(),
           lastName:      formData.lastName.trim(),
           email:         formData.email.trim(),
@@ -213,30 +239,23 @@ export default function Register() {
           password:      formData.password,
           securityQuestion: formData.securityQuestion,
           securityAnswer:   formData.securityAnswer.trim(),
-          kyc: {
-            panCard: {
-              fileName:   panFile.name,
-              fileSize:   panFile.size,
-              fileType:   panFile.type,
-              fileData:   panBase64,       // base64 for preview
-              uploadedAt: new Date().toISOString(),
-              verified:   false
-            },
-            aadhaarCard: {
-              fileName:   aadhaarFile.name,
-              fileSize:   aadhaarFile.size,
-              fileType:   aadhaarFile.type,
-              fileData:   aadhaarBase64,   // base64 for preview
-              uploadedAt: new Date().toISOString(),
-              verified:   false
-            }
-          },
+          kyc:       kycMeta,   // metadata only — no base64
           kycStatus: 'Pending Verification',
           status:    'Pending',
           createdAt: new Date().toISOString()
         };
 
+        /* Save accounts (lean — no base64) */
         localStorage.setItem('bankAccounts', JSON.stringify([...storedAccounts, newAccount]));
+
+        /* Save KYC files separately */
+        try {
+          localStorage.setItem(`kyc_${accountNumber}`, JSON.stringify(kycFiles));
+        } catch {
+          /* If KYC files also exceed quota, skip silently — metadata is still saved */
+          console.warn('KYC file data could not be stored due to storage quota.');
+        }
+
         setRegisteredAccount(newAccount);
         setShowSuccess(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
