@@ -25,12 +25,17 @@ export default function Login() {
     return () => clearTimeout(t);
   }, []);
 
-  /* Close → go back to the page the user was on */
+  /* Close → go back to the page the user was on, or home if no history */
   const closeModal = useCallback(() => {
     setModalOpen(false);
-    // Remove blur class from app root immediately on close
     document.getElementById('root')?.classList.remove('page-blurred');
-    setTimeout(() => navigate(-1), 280);
+    document.body.style.overflow = '';
+    // If there's a previous history entry go back, otherwise go home
+    if (window.history.length > 1) {
+      setTimeout(() => navigate(-1), 280);
+    } else {
+      setTimeout(() => navigate('/'), 280);
+    }
   }, [navigate]);
 
   /* Escape key */
@@ -67,9 +72,15 @@ export default function Login() {
     const email = formData.username.trim().toLowerCase();
     const password = formData.password;
 
-    if (email === 'admin-vjn@gmail.com' && password === 'admin@123') {
+    const cleanup = () => {
+      setModalOpen(false);
       document.getElementById('root')?.classList.remove('page-blurred');
-      navigate('/admin-dashboard');
+      document.body.style.overflow = '';
+    };
+
+    if (email === 'admin-vjn@gmail.com' && password === 'admin@123') {
+      cleanup();
+      navigate('/admin-dashboard', { replace: true });
       return;
     }
 
@@ -80,14 +91,18 @@ export default function Login() {
     );
 
     if (!userAccount || userAccount.status !== 'Approved') {
-      setLoginError('Invalid username / email or password.');
+      setLoginError(
+        userAccount && userAccount.status !== 'Approved'
+          ? 'Your account is pending admin approval. Please wait.'
+          : 'Invalid username / email or password.'
+      );
       return;
     }
 
     setLoginError('');
     localStorage.setItem('currentUser', JSON.stringify(userAccount));
-    document.getElementById('root')?.classList.remove('page-blurred');
-    navigate('/user-dashboard');
+    cleanup();
+    navigate('/user-dashboard', { replace: true });
   };
 
   return (

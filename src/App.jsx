@@ -19,16 +19,20 @@ import ApplicationStatus from './Pages/ApplicationStatus'
 
 function AppRoutes() {
   const location = useLocation()
-
-  // If we navigated to /login, /forgot-password, or /reset-password with a
-  // background location in state, render the background page underneath
-  // and the modal on top.
   const backgroundLocation = location.state?.backgroundLocation
+
+  // Modal paths — these render as overlays on top of the background page
+  const MODAL_PATHS = ['/login', '/forgot-password', '/reset-password', '/application-status']
+  const isModalPath = MODAL_PATHS.includes(location.pathname)
+
+  // When a modal path is visited directly (no backgroundLocation),
+  // use Home as the background so the overlay always has a page behind it
+  const bgLocation = backgroundLocation || (isModalPath ? { pathname: '/' } : location)
 
   return (
     <>
-      {/* ── Background page (or normal page when no modal) ── */}
-      <Routes location={backgroundLocation || location}>
+      {/* ── Background page ── */}
+      <Routes location={bgLocation}>
         <Route path="/"                          element={<Home />} />
         <Route path="/user-dashboard"            element={<UserDashboard />} />
         <Route path="/admin-dashboard"           element={<AdminDashboard />} />
@@ -41,15 +45,10 @@ function AppRoutes() {
         <Route path="/report-fraud"              element={<ReportFraud />} />
         <Route path="/cards"                     element={<ComingSoon />} />
         <Route path="/insurance"                 element={<ComingSoon />} />
-        {/* Fallback renders when no backgroundLocation */}
-        <Route path="/login"                     element={<Login />} />
-        <Route path="/forgot-password"           element={<ForgotPassword />} />
-        <Route path="/reset-password"            element={<ResetPassword />} />
-        <Route path="/application-status"        element={<ApplicationStatus />} />
       </Routes>
 
-      {/* ── Modal overlays: only when backgroundLocation is set ── */}
-      {backgroundLocation && (
+      {/* ── Modal overlays ── */}
+      {(backgroundLocation || isModalPath) && (
         <Routes>
           <Route path="/login"                element={<Login />} />
           <Route path="/forgot-password"      element={<ForgotPassword />} />
